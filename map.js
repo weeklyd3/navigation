@@ -1,6 +1,62 @@
 addEventListener("error", function (e) {
 	alert(e.message);
 });
+function success(ev) {
+	player.lat = ev.coords.latitude;
+	player.long = ev.coords.longitude;
+	player.geo_err = false;
+	if (ev.coords.heading || ev.coords.heading === 0) player.hdg = ev.coords.heading;
+}
+function error() {
+	player.geo_err = true;
+}
+options = {
+	enableHighAccuracy: false,
+	timeout: 5000,
+	maximumAge: 0,
+};
+
+id = navigator.geolocation.watchPosition(success, error, options);
+
+const AHRS = require("ahrs");
+const madgwick = new AHRS({
+	/*
+	 * The sample interval, in Hz.
+	 *
+	 * Default: 20
+	 */
+	sampleInterval: 24,
+
+	/*
+	 * Choose from the `Madgwick` or `Mahony` filter.
+	 *
+	 * Default: 'Madgwick'
+	 */
+	algorithm: "Madgwick",
+
+	/*
+	 * The filter noise value, smaller values have
+	 * smoother estimates, but have higher latency.
+	 * This only works for the `Madgwick` filter.
+	 *
+	 * Default: 0.4
+	 */
+	beta: 0.01,
+
+	/*
+	 * The filter noise values for the `Mahony` filter.
+	 */
+	kp: 0.5, // Default: 0.5
+	ki: 0, // Default: 0.0
+
+	/*
+	 * When the AHRS algorithm runs for the first time and this value is
+	 * set to true, then initialisation is done.
+	 *
+	 * Default: false
+	 */
+	doInitialisation: false,
+});
 const width = 1920 / 2;
 const height = 1080 / 2;
 var player = {
@@ -10,7 +66,11 @@ var player = {
 	speed: 0,
 	pitch: 0,
 	roll: 0,
+	zoom: 10,
+	acceleration: { x: 0, y: 0, z: 0 },
+	rotationRate: { x: 0, y: 0, z: 0 },
 };
+
 function startOrientation() {
 	if (typeof DeviceMotionEvent.requestPermission === "function") {
 		DeviceOrientationEvent.requestPermission().then(function (response) {
@@ -23,65 +83,162 @@ function startOrientation() {
 	}
 }
 window.addEventListener("deviceorientation", function (event) {
+	return;
 	// https://stackoverflow.com/a/42799567/15578194
 	// those angles are in degrees
-	var alpha = event.alpha;  
+	var alpha = event.alpha;
 	var beta = event.beta;
 	var gamma = event.gamma;
 
 	// JS math works in radians
-	var betaR = beta / 180 * Math.PI;
-	var gammaR = gamma / 180 * Math.PI;
+	var betaR = (beta / 180) * Math.PI;
+	var gammaR = (gamma / 180) * Math.PI;
 	var spinR = Math.atan2(Math.cos(betaR) * Math.sin(gammaR), Math.sin(betaR));
 
 	// convert back to degrees
-	var spin = spinR * 180 / Math.PI;
-	player.pitch = event.beta - 90;
-	player.roll = event.gamma;
+	var spin = (spinR * 180) / Math.PI;
+	player.pitch = event.beta;
+	player.roll = spin;
 });
-function nd() {
-	draw.textAlign("top", "right");
-	draw.textSize(20);
-	draw.text("GS " + Math.round((player.speed / 1852) * 3600), 10, 30);
+addEventListener("devicemotion", (event) => {
+	player.acceleration.x = event.acceleration.x / 9.81;
+	player.acceleration.y = event.acceleration.y / 9.81;
+	player.acceleration.z = event.acceleration.z / 9.81;
+	player.rotationRate.x = event.rotationRate.gamma; // * Math.PI / 180;
+	player.rotationRate.y = event.rotationRate.alpha; // * Math.PI / 180;
+	player.rotationRate.z = event.rotationRate.beta; // * Math.PI / 180;
+	player.interval = event.interval;
+});
+// https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+function lon2tile(lon, zoom) {
+	return ((lon + 180) / 360) * Math.pow(2, zoom);
+}
+function lat2tile(lat, zoom) {
+	return (
+		((1 -
+			Math.log(
+				Math.tan((lat * Math.PI) / 180) +
+					1 / Math.cos((lat * Math.PI) / 180),
+			) /
+				Math.PI) /
+			2) *
+		Math.pow(2, zoom)
+	);
+}
+var tile_cache = {};
+function nd(display) {
+	display.clear();
+	x_offset = 256 * (lon2tile(player.long, player.zoom) % 1);
+	y_offset = 256 * (lat2tile(player.lat, player.zoom) % 1);
+	display.textAlign("top", "right");
+	display.textSize(20);
+	display.fill('green');
+	display.text("GS " + Math.round((player.speed / 1852) * 3600), 10, 30);
+	display.push();
+	display.fill("black");
+	display.stroke("white");
+	var tile = [
+		Math.floor(lon2tile(player.long, player.zoom)),
+		Math.floor(lat2tile(player.lat, player.zoom)),
+	];
+
+	display.translate(1920 / 8, 500);
+	display.rotate(player.hdg);
+	for (var i = -2; i <= 2; i++) {
+		for (var j = -3; j <= 1; j++) {
+			var image = tile_image(tile[0] + i, tile[1] + j, player.zoom);
+			display.image(
+				image,
+				-x_offset + 256 * i,
+				-y_offset + 256 * j,
+			);
+		}
+	}
+	display.rotate(-player.hdg);
+	display.triangle(0, -25, 17, 25, -17, 25);
+	display.pop();
+	if (player.geo_err) {
+		display.fill("red");
+		display.rect(1920 / 4 - 100, 0, 100, 30);
+		display.fill("white");
+		display.textAlign("center", "center");
+		display.textSize(10);
+		display.text("GEOLOCATION ERR", 1920 / 4 - 50, 15);
+	}
+}
+function tile_image(x, y, zoom) {
+	if (!tile_cache[zoom]) tile_cache[zoom] = {};
+	if (!tile_cache[zoom][x]) tile_cache[zoom][x] = {};
+	if (!tile_cache[zoom][x][y])
+		tile_cache[zoom][x][y] = draw.loadImage(
+			`https://tile.openstreetmap.org/${zoom}/${x}/${y}.png`,
+		);
+	var tile_image = tile_cache[zoom][x][y];
+	return tile_image;
 }
 function pfd(display) {
-	const vertical_deviation = player.pitch * 100 / 10;
+	madgwick.update(
+		player.rotationRate.x,
+		player.rotationRate.y,
+		player.rotationRate.z,
+		player.acceleration.x,
+		player.acceleration.y,
+		player.acceleration.z,
+		undefined,
+		undefined,
+		undefined,
+		player.interval / 1000,
+	);
+	euler = madgwick.getEulerAngles();
+	player.pitch = euler.pitch * 1000;
+	player.roll = euler.roll * 1000;
+	const vertical_deviation = (player.pitch * 100) / 10;
 	display.clear();
 	display.push();
 	display.translate(1920 / 8, 1080 / 4);
-	display.rotate(-player.roll);
+	display.rotate(player.roll);
 	display.fill("brown");
 	display.rect(-1920, vertical_deviation, 1920 * 2, 1080);
-	display.fill('blue');
+	display.fill("blue");
 	display.rect(-1920, -1080 + vertical_deviation, 1920 * 2, 1080);
-	display.fill('white');
+	display.fill("white");
 	display.strokeWeight(0);
 	for (var i = 10; i <= 90; i += 10) {
-		display.rect(-100, vertical_deviation + -i * 100 / 10 - 0.5, 200, 1);
+		display.rect(-100, vertical_deviation + (-i * 100) / 10 - 0.5, 200, 1);
+		display.rect(-100, vertical_deviation + (i * 100) / 10 - 0.5, 200, 1);
 	}
 	display.pop();
 	display.push();
-	display.fill('black');
-	display.stroke('yellow');
+	display.fill("black");
+	display.stroke("yellow");
 	display.translate(1920 / 8, 1080 / 4);
 	display.triangle(-5, 0, -80, 20, -55, 20);
-	display.triangle(5, 0, 80, 20, 55, 20)
+	display.triangle(5, 0, 80, 20, 55, 20);
 	display.pop();
+	display.fill("white");
+	display.textAlign("left", "top");
+	display.text(
+		`${JSON.stringify(euler, null, 2)}\n${player.acceleration.x}\n${player.acceleration.y}\n${player.acceleration.z}\n${player.rotationRate.x}\n${player.rotationRate.y}\n${player.rotationRate.z}\n\n${(player.pitch * Math.PI) / 180}\n${(player.roll * Math.PI) / 180}`,
+		100,
+		100,
+	);
 }
 function update() {
 	draw.clear();
 	draw.fill("black");
 	draw.rect(0, 0, width, height);
 	draw.fill("lime");
-	nd();
+	nd(nd_canvas);
 	pfd(pfd_canvas);
 	draw.image(pfd_canvas, 1920 / 4, 0, 1920 / 4, 1080 / 2);
+	draw.image(nd_canvas, 0, 0, 1920 / 4, 1080 / 2);
 }
 var s = function (sketch) {
 	sketch.setup = async function () {
 		draw.angleMode(draw.DEGREES);
 		pfd_canvas = draw.createGraphics(1920 / 4, 1080 / 2);
 		pfd_canvas.angleMode(draw.DEGREES);
+		nd_canvas = draw.createGraphics(1920 / 4, 1080 / 2);
 		sketch.createCanvas(width, height);
 		updateInterval = setInterval(update, 1000 / 24);
 	};
