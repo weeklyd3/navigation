@@ -141,11 +141,11 @@ function nd(display) {
 		Math.floor(lon2tile(player.long, player.zoom)),
 		Math.floor(lat2tile(player.lat, player.zoom)),
 	];
-
+	
 	display.translate(1920 / 8, 500);
-	display.rotate(player.hdg);
+	display.rotate(-player.hdg);
 	for (var i = -2; i <= 2; i++) {
-		for (var j = -3; j <= 1; j++) {
+		for (var j = -3; j <= 2; j++) {
 			var image = tile_image(tile[0] + i, tile[1] + j, player.zoom);
 			display.image(
 				image,
@@ -154,9 +154,36 @@ function nd(display) {
 			);
 		}
 	}
-	display.rotate(-player.hdg);
+	display.rotate(player.hdg);
 	display.triangle(0, -25, 17, 25, -17, 25);
+	display.image(nd_top, -1920 / 8, -500);
+	display.strokeWeight(0);
+	display.fill('white');
+	display.textAlign('center', 'center');
+	display.rotate(-player.hdg);
+	for (var i = 0; i < 36; i++) {
+		displayString = i * 10;
+		if (i == 0) displayString = "N";
+		if (i == 9) displayString = "E";
+		if (i == 18) displayString = "S";
+		if (i == 27) displayString = "W";
+		display.text(displayString, 0, -435);
+		display.rotate(10);
+	}
+	display.rotate(player.hdg);
+	display.stroke('white');
+	display.fill('magenta');
+	display.strokeWeight(2);
+	display.rect(-25, -445, 50, 20);
+	display.stroke('magenta');
+	display.line(0, -25, 0, -423);
+	display.fill('black');
+	display.text(Math.round(player.hdg), 0, -435);
 	display.pop();
+	display.fill('black');
+	display.textAlign('right', 'bottom');
+	display.textSize(12);
+	display.text('(C) OpenStreetMap contributors\nopenstreetmap.org/copyright', 1920 / 4, 1080 / 2)
 	if (player.geo_err) {
 		display.fill("red");
 		display.rect(1920 / 4 - 100, 0, 100, 30);
@@ -167,6 +194,7 @@ function nd(display) {
 	}
 }
 function tile_image(x, y, zoom) {
+	if (x <= 0 || y <= 0) return emptyCanvas;
 	if (!tile_cache[zoom]) tile_cache[zoom] = {};
 	if (!tile_cache[zoom][x]) tile_cache[zoom][x] = {};
 	if (!tile_cache[zoom][x][y])
@@ -217,11 +245,11 @@ function pfd(display) {
 	display.pop();
 	display.fill("white");
 	display.textAlign("left", "top");
-	display.text(
+	/* display.text(
 		`${JSON.stringify(euler, null, 2)}\n${player.acceleration.x}\n${player.acceleration.y}\n${player.acceleration.z}\n${player.rotationRate.x}\n${player.rotationRate.y}\n${player.rotationRate.z}\n\n${(player.pitch * Math.PI) / 180}\n${(player.roll * Math.PI) / 180}`,
 		100,
 		100,
-	);
+	); */
 }
 function update() {
 	draw.clear();
@@ -239,8 +267,21 @@ var s = function (sketch) {
 		pfd_canvas = draw.createGraphics(1920 / 4, 1080 / 2);
 		pfd_canvas.angleMode(draw.DEGREES);
 		nd_canvas = draw.createGraphics(1920 / 4, 1080 / 2);
+		nd_canvas.angleMode(draw.DEGREES);
+		nd_top = draw.createGraphics(480, 300);
+		nd_top.fill('black');
+		nd_top.rect(0, 0, 480, 300);
+		nd_top.erase();
+		nd_top.circle(240, 500, 850);
+		nd_top.noErase();
+		emptyCanvas = draw.createGraphics(256, 256);
+		emptyCanvas.background('black');
+		emptyCanvas.textSize(35);
+		emptyCanvas.fill('white');
+		emptyCanvas.textAlign('center', 'center');
+		emptyCanvas.text('OUT OF\nBOUNDS', 128, 128);
 		sketch.createCanvas(width, height);
 		updateInterval = setInterval(update, 1000 / 24);
 	};
 };
-var draw = new p5(s, "pad");
+var draw = new p5(s, "map");

@@ -10,5 +10,7 @@
 		<script src="p5.js"></script>
 		<script src="map.js"></script>
 		<button onclick="startOrientation()">request attitude</button>
+		<button onclick="player.zoom -= 1; if (player.zoom < 1) player.zoom = 1;">map range increase (zoom out)</button>
+		<button onclick="player.zoom += 1; if (player.zoom > 19) player.zoom = 19;">map range decrease (zoom in)</button>
 	</body>
 </html>
