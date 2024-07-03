@@ -1,6 +1,7 @@
 addEventListener("error", function (e) {
 	alert(e.message);
 });
+var darkMode = false;
 function success(ev) {
 	player.lat = ev.coords.latitude;
 	player.long = ev.coords.longitude;
@@ -66,7 +67,7 @@ var player = {
 	speed: 0,
 	pitch: 0,
 	roll: 0,
-	zoom: 10,
+	zoom: 15,
 	acceleration: { x: 0, y: 0, z: 0 },
 	rotationRate: { x: 0, y: 0, z: 0 },
 };
@@ -130,10 +131,6 @@ function nd(display) {
 	display.clear();
 	x_offset = 256 * (lon2tile(player.long, player.zoom) % 1);
 	y_offset = 256 * (lat2tile(player.lat, player.zoom) % 1);
-	display.textAlign("top", "right");
-	display.textSize(20);
-	display.fill('green');
-	display.text("GS " + Math.round((player.speed / 1852) * 3600), 10, 30);
 	display.push();
 	display.fill("black");
 	display.stroke("white");
@@ -170,6 +167,7 @@ function nd(display) {
 		display.text(displayString, 0, -435);
 		display.rotate(10);
 	}
+	display.textSize(15);
 	display.rotate(player.hdg);
 	display.stroke('white');
 	display.fill('magenta');
@@ -178,29 +176,48 @@ function nd(display) {
 	display.stroke('magenta');
 	display.line(0, -25, 0, -423);
 	display.fill('black');
-	display.text(Math.round(player.hdg), 0, -435);
+	display.text(Math.round(player.hdg % 360), 0, -435);
 	display.pop();
-	display.fill('black');
-	display.textAlign('right', 'bottom');
+	display.fill('white');
+	display.textAlign('right', 'top');
 	display.textSize(12);
-	display.text('(C) OpenStreetMap contributors\nopenstreetmap.org/copyright', 1920 / 4, 1080 / 2)
+	display.text('map (C) OpenStreetMap contributors\nhttps://openstreetmap.org/copyright', 1920 / 4, 0)
 	if (player.geo_err) {
 		display.fill("red");
-		display.rect(1920 / 4 - 100, 0, 100, 30);
+		display.rect(1920 / 4 - 100, 30, 100, 30);
 		display.fill("white");
 		display.textAlign("center", "center");
 		display.textSize(10);
-		display.text("GEOLOCATION ERR", 1920 / 4 - 50, 15);
+		display.text("GEOLOCATION ERR", 1920 / 4 - 50, 45);
 	}
 }
+
 function tile_image(x, y, zoom) {
 	if (x <= 0 || y <= 0) return emptyCanvas;
 	if (!tile_cache[zoom]) tile_cache[zoom] = {};
 	if (!tile_cache[zoom][x]) tile_cache[zoom][x] = {};
-	if (!tile_cache[zoom][x][y])
+	if (!tile_cache[zoom][x][y]) {
 		tile_cache[zoom][x][y] = draw.loadImage(
 			`https://tile.openstreetmap.org/${zoom}/${x}/${y}.png`,
 		);
+		tile_cache[zoom][x][y].inverted = false;
+	} else {
+		if (tile_cache[zoom][x][y].width > 200 && !tile_cache[zoom][x][y].inverted) {
+			if (darkMode) {
+				tile_cache[zoom][x][y].loadPixels();
+				var pixels = tile_cache[zoom][x][y].pixels;
+				for (var p = 0; p < pixels.length; p += 4) {
+					rgb_color = nd_canvas.color(pixels[p], pixels[p + 1], pixels[p + 2]);
+					color = hsl_canvas.color((draw.hue(rgb_color) + 180) % 360, draw.saturation(rgb_color), draw.lightness(rgb_color));
+					tile_cache[zoom][x][y].pixels[p] = 255 - draw.red(color);
+					tile_cache[zoom][x][y].pixels[p + 1] = 255 - draw.green(color);
+					tile_cache[zoom][x][y].pixels[p + 2] = 255 - draw.blue(color);
+				}
+				tile_cache[zoom][x][y].updatePixels();
+			}
+			tile_cache[zoom][x][y].inverted = true;
+		}
+	}
 	var tile_image = tile_cache[zoom][x][y];
 	return tile_image;
 }
@@ -280,6 +297,8 @@ var s = function (sketch) {
 		emptyCanvas.fill('white');
 		emptyCanvas.textAlign('center', 'center');
 		emptyCanvas.text('OUT OF\nBOUNDS', 128, 128);
+		hsl_canvas = draw.createGraphics(5, 5);
+		hsl_canvas.colorMode(draw.HSL);
 		sketch.createCanvas(width, height);
 		updateInterval = setInterval(update, 1000 / 24);
 	};

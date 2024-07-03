@@ -9,8 +9,11 @@
 		<script src="fulltilt.js"></script>
 		<script src="p5.js"></script>
 		<script src="map.js"></script>
+		<script src="netbeast_colorsys.js"></script>
 		<button onclick="startOrientation()">request attitude</button>
-		<button onclick="player.zoom -= 1; if (player.zoom < 1) player.zoom = 1;">map range increase (zoom out)</button>
-		<button onclick="player.zoom += 1; if (player.zoom > 19) player.zoom = 19;">map range decrease (zoom in)</button>
-	</body>
+		<button onclick="player.zoom -= 1; if (player.zoom < 1) player.zoom = 1;">map range increase (zoom out)</button><button onclick="player.zoom += 1; if (player.zoom > 19) player.zoom = 19;">map range decrease (zoom in)</button>
+		<button onclick="if (draw.canvas.requestFullscreen) draw.canvas.requestFullscreen(); else if (draw.canvas.webkitEnterFullscreen) draw.canvas.webkitEnterFullscreen(); else alert('no fullscreen support')">fullscreen</button>
+		<button onclick="darkMode = !darkMode; tile_cache = {}; console.log('dark set')">toggle dark map (SLOW)</button>
+	 <a href="https://github.com/weeklyd3/navigation">report a problem</a>
+</body>
 </html>
