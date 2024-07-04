@@ -2,6 +2,7 @@ addEventListener("error", function (e) {
 	alert(e.message);
 });
 var darkMode = false;
+lastLocation = {'coords': {}};
 function success(ev) {
 	lastLocation = ev;
 	console.log(ev);
@@ -188,7 +189,9 @@ function nd(display) {
 	display.fill('white');
 	display.textAlign('right', 'top');
 	display.textSize(12);
-	display.text('map (C) OpenStreetMap contributors\nhttps://openstreetmap.org/copyright', 1920 / 4, 0)
+	display.text('map (C) OpenStreetMap contributors\nhttps://openstreetmap.org/copyright', 1920 / 4, 0);
+	display.textAlign('left', 'top');
+	display.text(`GPS:\n${lastLocation.coords.latitude}, ${lastLocation.coords.longitude}\nGS ${(lastLocation.coords.speed == null || lastLocation.coords.speed != lastLocation.coords.speed) ? lastLocation.coords.speed : lastLocation.coords.speed * 3600 / 1852} kts\nHDG ${lastLocation.coords.heading}\n${(lastLocation.coords.altitude == null || lastLocation.coords.altitude != lastLocation.coords.altitude) ? lastLocation.coords.altitude : Math.round(lastLocation.coords.altitude * 100 / 2.54 / 12)} ft amsl`, 0, 0)
 	if (player.geo_err) {
 		display.fill("red");
 		display.rect(1920 / 4 - 100, 30, 100, 30);
