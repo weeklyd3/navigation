@@ -6,6 +6,7 @@ function success(ev) {
 	player.lat = ev.coords.latitude;
 	player.long = ev.coords.longitude;
 	player.geo_err = false;
+	player.speed = ev.coords.speed ?? 0;
 	if (ev.coords.heading || ev.coords.heading === 0) player.hdg = ev.coords.heading;
 }
 function error() {
@@ -65,6 +66,7 @@ var player = {
 	long: 0,
 	hdg: 0,
 	speed: 0,
+	previousSpeed: 0,
 	pitch: 0,
 	roll: 0,
 	zoom: 15,
@@ -191,7 +193,6 @@ function nd(display) {
 		display.text("GEOLOCATION ERR", 1920 / 4 - 50, 45);
 	}
 }
-
 function tile_image(x, y, zoom) {
 	if (x <= 0 || y <= 0) return emptyCanvas;
 	if (!tile_cache[zoom]) tile_cache[zoom] = {};
@@ -220,6 +221,63 @@ function tile_image(x, y, zoom) {
 	}
 	var tile_image = tile_cache[zoom][x][y];
 	return tile_image;
+}
+function drawDigit(canvas, x, digit, showZero, transition = 0.2) {
+	canvas.textSize(20);
+	canvas.push();
+	canvas.textAlign('center', 'center');
+	var y = 14;
+	if ((digit % 1) > (1 - transition / 2)) y += 15 * ((digit % 1) - 1 + transition / 2) / (transition / 2)
+	if ((digit % 1) < transition / 2) y -= 15 * (1 - (digit % 1) / (transition / 2))
+	canvas.translate(x, y);
+	digitToDraw = Math.floor(digit)
+	if (showZero || digitToDraw) canvas.text(digitToDraw, 0, 0)
+	canvas.text((digitToDraw + 1) % 10, 0, -30);
+	if (showZero || ((9 + digitToDraw) % 10)) canvas.text((9 + digitToDraw) % 10, 0, 30);
+	canvas.pop();
+}
+function updateSpeed() {
+	speedTape.clear();
+	speedTape.fill('lightgray');
+	speedTape.rect(0, 0, 75, 300);
+	speedTape.stroke('black');
+	speedTape.fill('black');
+	speedTape.push();
+	speedTape.strokeWeight(3);
+	speedTape.textAlign('left', 'center');
+	var start = -330 + (player.speed % 10) * 6;
+	var startspeed = Math.floor(player.speed / 10) * 10 + 80;
+	for (var i = 0; i < 17; i++) {
+		if (startspeed < 0) break;
+		speedTape.strokeWeight(3);
+		speedTape.line(0, start, 45, start)
+		speedTape.strokeWeight(0);
+		speedTape.text(startspeed, 50, start)
+		start += 60
+		startspeed -= 10
+	}
+	speedTape.fill('yellow');
+	speedTape.triangle(75, 145, 75, 155, 65, 150)
+	speedTape.strokeWeight(3);
+	speedTape.stroke('yellow');
+	speedTape.line(50, 150, 75, 150)
+	speedTape.pop();
+	speedIndicator.clear();
+	speedIndicator.fill('black');
+	speedIndicator.rect(0, 0, 45, 28);
+	hundreds = player.speed / 100
+	tens = (player.speed / 10) % 10
+	ones = player.speed % 10
+	speedIndicator.fill('white');
+	drawDigit(speedIndicator, 45 / 4, hundreds, false);
+	drawDigit(speedIndicator, 90 / 4, tens, player.speed >= 100);
+	drawDigit(speedIndicator, 135 / 4, ones, true, 1);
+	speedTape.stroke('green');
+	speedTape.strokeWeight(5);
+	speedTape.line(22.5, 150, 22.5, 150 - (player.speed - player.previousSpeed) * 240 * 6)
+	speedTape.strokeWeight(0);
+	speedTape.image(speedIndicator, 0, 150 - 14);
+	player.previousSpeed = player.speed;
 }
 function pfd(display) {
 	madgwick.update(
@@ -260,6 +318,8 @@ function pfd(display) {
 	display.triangle(-5, 0, -80, 20, -55, 20);
 	display.triangle(5, 0, 80, 20, 55, 20);
 	display.pop();
+	updateSpeed();
+	display.image(speedTape, 25, 100);
 	display.fill("white");
 	display.textAlign("left", "top");
 	/* display.text(
@@ -297,6 +357,9 @@ var s = function (sketch) {
 		emptyCanvas.fill('white');
 		emptyCanvas.textAlign('center', 'center');
 		emptyCanvas.text('OUT OF\nBOUNDS', 128, 128);
+		speedTape = draw.createGraphics(75, 300);
+		speedIndicator = draw.createGraphics(45, 28);
+		speedIndicator.background('black');
 		hsl_canvas = draw.createGraphics(5, 5);
 		hsl_canvas.colorMode(draw.HSL);
 		sketch.createCanvas(width, height);
