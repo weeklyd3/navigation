@@ -3,17 +3,21 @@ addEventListener("error", function (e) {
 });
 var darkMode = false;
 function success(ev) {
+	lastLocation = ev;
+	document.getElementById('status').textContent = JSON.stringify({...ev.coords});
+	console.log(ev);
 	player.lat = ev.coords.latitude;
 	player.long = ev.coords.longitude;
 	player.geo_err = false;
-	player.speed = ev.coords.speed ?? 0;
-	if (ev.coords.heading || ev.coords.heading === 0) player.hdg = ev.coords.heading;
+	player.speed = (ev.coords.speed * 3600 / 1852) ?? 0;
+	if (ev.coords.speed === null) player.noSpeed = true;
+	if (ev.coords.heading == ev.coords.heading && (ev.coords.heading || ev.coords.heading === 0)) player.hdg = ev.coords.heading;
 }
 function error() {
 	player.geo_err = true;
 }
 options = {
-	enableHighAccuracy: false,
+	enableHighAccuracy: true,
 	timeout: 5000,
 	maximumAge: 0,
 };
@@ -66,6 +70,7 @@ var player = {
 	long: 0,
 	hdg: 0,
 	speed: 0,
+	noSpeed: false,
 	previousSpeed: 0,
 	pitch: 0,
 	roll: 0,
@@ -238,6 +243,14 @@ function drawDigit(canvas, x, digit, showZero, transition = 0.2) {
 }
 function updateSpeed() {
 	speedTape.clear();
+	if (player.noSpeed) {
+		speedTape.fill('red');
+		speedTape.rect(0, 0, 75, 300);
+		speedTape.textAlign('center', 'center');
+		speedTape.fill('black');
+		speedTape.text('SPD', 75 / 2, 150);
+		return;
+	}
 	speedTape.fill('lightgray');
 	speedTape.rect(0, 0, 75, 300);
 	speedTape.stroke('black');
