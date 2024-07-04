@@ -10,6 +10,7 @@ function success(ev) {
 	player.geo_err = false;
 	player.speed = (ev.coords.speed * 3600 / 1852) ?? 0;
 	if (ev.coords.speed === null) player.noSpeed = true;
+	else player.noSpeed = false;
 	if (ev.coords.heading == ev.coords.heading && (ev.coords.heading || ev.coords.heading === 0)) player.hdg = ev.coords.heading;
 }
 function error() {
