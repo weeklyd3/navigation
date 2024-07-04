@@ -17,7 +17,7 @@ function error() {
 	player.geo_err = true;
 }
 options = {
-	enableHighAccuracy: true,
+	enableHighAccuracy: false,
 	timeout: 5000,
 	maximumAge: 0,
 };
