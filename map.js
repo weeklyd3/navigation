@@ -4,7 +4,6 @@ addEventListener("error", function (e) {
 var darkMode = false;
 function success(ev) {
 	lastLocation = ev;
-	document.getElementById('status').textContent = JSON.stringify({...ev.coords});
 	console.log(ev);
 	player.lat = ev.coords.latitude;
 	player.long = ev.coords.longitude;
