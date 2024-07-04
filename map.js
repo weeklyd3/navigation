@@ -135,7 +135,9 @@ function lat2tile(lat, zoom) {
 	);
 }
 var tile_cache = {};
+fcount = 0
 function nd(display) {
+	fcount += 1
 	display.clear();
 	x_offset = 256 * (lon2tile(player.long, player.zoom) % 1);
 	y_offset = 256 * (lat2tile(player.lat, player.zoom) % 1);
@@ -191,7 +193,7 @@ function nd(display) {
 	display.textSize(12);
 	display.text('map (C) OpenStreetMap contributors\nhttps://openstreetmap.org/copyright', 1920 / 4, 0);
 	display.textAlign('left', 'top');
-	display.text(`GPS:\n${lastLocation.coords.latitude}, ${lastLocation.coords.longitude}\nGS ${(lastLocation.coords.speed == null || lastLocation.coords.speed != lastLocation.coords.speed) ? lastLocation.coords.speed : lastLocation.coords.speed * 3600 / 1852} kts (raw: ${lastLocation.coords.speed} m/s)\nHDG ${lastLocation.coords.heading}\n${(lastLocation.coords.altitude == null || lastLocation.coords.altitude != lastLocation.coords.altitude) ? lastLocation.coords.altitude : Math.round(lastLocation.coords.altitude * 100 / 2.54 / 12)} ft amsl (raw: ${lastLocation.coords.altitude} m)`, 0, 0)
+	display.text(`GPS:\n${lastLocation.coords.latitude}, ${lastLocation.coords.longitude}\nGS ${(lastLocation.coords.speed == null || lastLocation.coords.speed != lastLocation.coords.speed) ? lastLocation.coords.speed : lastLocation.coords.speed * 3600 / 1852} kts (raw: ${lastLocation.coords.speed} m/s)\nHDG ${lastLocation.coords.heading}\n${(lastLocation.coords.altitude == null || lastLocation.coords.altitude != lastLocation.coords.altitude) ? lastLocation.coords.altitude : Math.round(lastLocation.coords.altitude * 100 / 2.54 / 12)} ft amsl (raw: ${lastLocation.coords.altitude} m)\nf#${fcount}`, 0, 0)
 	if (player.geo_err) {
 		display.fill("red");
 		display.rect(1920 / 4 - 100, 30, 100, 30);
