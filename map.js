@@ -5,7 +5,6 @@ var darkMode = false;
 lastLocation = {'coords': {}};
 function success(ev) {
 	lastLocation = ev;
-	console.log(ev);
 	player.lat = ev.coords.latitude;
 	player.long = ev.coords.longitude;
 	player.geo_err = false;
@@ -20,7 +19,7 @@ function error() {
 options = {
 	enableHighAccuracy: false,
 	timeout: 5000,
-	maximumAge: 0,
+	maximumAge: Infinity
 };
 
 id = navigator.geolocation.watchPosition(success, error, options);
