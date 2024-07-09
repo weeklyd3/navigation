@@ -5,13 +5,6 @@ var darkMode = false;
 lastLocation = {'coords': {}};
 function success(ev) {
 	lastLocation = ev;
-	player.lat = ev.coords.latitude;
-	player.long = ev.coords.longitude;
-	player.geo_err = false;
-	player.speed = (ev.coords.speed * 3600 / 1852) ?? 0;
-	if (ev.coords.speed === null) player.noSpeed = true;
-	else player.noSpeed = false;
-	if (ev.coords.heading == ev.coords.heading && (ev.coords.heading || ev.coords.heading === 0)) player.hdg = ev.coords.heading;
 }
 function error() {
 	player.geo_err = true;
@@ -19,7 +12,7 @@ function error() {
 options = {
 	enableHighAccuracy: false,
 	timeout: 5000,
-	maximumAge: Infinity
+	maximumAge: Infinity,
 };
 
 id = navigator.geolocation.watchPosition(success, error, options);
@@ -346,6 +339,13 @@ function pfd(display) {
 	); */
 }
 function update() {
+	player.lat = ev.coords.latitude;
+	player.long = ev.coords.longitude;
+	player.geo_err = false;
+	player.speed = (ev.coords.speed * 3600 / 1852) ?? 0;
+	if (ev.coords.speed === null) player.noSpeed = true;
+	else player.noSpeed = false;
+	if (ev.coords.heading == ev.coords.heading && (ev.coords.heading || ev.coords.heading === 0)) player.hdg = ev.coords.heading;
 	draw.clear();
 	draw.fill("black");
 	draw.rect(0, 0, width, height);
