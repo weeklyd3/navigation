@@ -2,9 +2,11 @@ addEventListener("error", function (e) {
 	alert(e.message);
 });
 var darkMode = false;
-lastLocation = {'coords': {}};
+lastLocation = {'coords': {}, 'valid': false};
 function success(ev) {
 	lastLocation = ev;
+	lastLocation.valid = true;
+	player.updateLastFrame = true;
 }
 function error() {
 	player.geo_err = true;
@@ -63,6 +65,7 @@ var player = {
 	long: 0,
 	hdg: 0,
 	speed: 0,
+	updateLastFrame: false,
 	noSpeed: false,
 	previousSpeed: 0,
 	pitch: 0,
@@ -193,6 +196,15 @@ function nd(display) {
 		display.textAlign("center", "center");
 		display.textSize(10);
 		display.text("GEOLOCATION ERR", 1920 / 4 - 50, 45);
+	}
+	if (player.updateLastFrame) {
+		player.updateLastFrame = false;
+		display.fill('green');
+		display.rect(1920 / 4 - 100, 30, 100, 30);
+		display.fill('white');
+		display.textAlign('center', 'center');
+		display.textSize(10);
+		display.text('NEW', 1920 / 4 - 50, 45);
 	}
 }
 function tile_image(x, y, zoom) {
@@ -339,13 +351,15 @@ function pfd(display) {
 	); */
 }
 function update() {
-	player.lat = ev.coords.latitude;
-	player.long = ev.coords.longitude;
-	player.geo_err = false;
-	player.speed = (ev.coords.speed * 3600 / 1852) ?? 0;
-	if (ev.coords.speed === null) player.noSpeed = true;
-	else player.noSpeed = false;
-	if (ev.coords.heading == ev.coords.heading && (ev.coords.heading || ev.coords.heading === 0)) player.hdg = ev.coords.heading;
+	if (lastLocation.valid) {
+		player.lat = lastLocation.coords.latitude;
+		player.long = lastLocation.coords.longitude;
+		player.geo_err = false;
+		player.speed = (lastLocation.coords.speed * 3600 / 1852) ?? 0;
+		if (lastLocation.coords.speed === null) player.noSpeed = true;
+		else player.noSpeed = false;
+		if (lastLocation.coords.heading == lastLocation.coords.heading && (lastLocation.coords.heading || lastLocation.coords.heading === 0)) player.hdg = lastLocation.coords.heading;
+	}
 	draw.clear();
 	draw.fill("black");
 	draw.rect(0, 0, width, height);
